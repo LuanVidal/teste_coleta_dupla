@@ -27,22 +27,25 @@ port.on('data', (data) => {
   const rawData = data.toString();
   console.log('Dados recebidos:', rawData);
 
-  // Exemplo: Analisar rawData e extrair valores de tensão e corrente
-  const [prefix, value] = rawData.split(':');
-  const numericValue = parseFloat(value);
+  // Exemplo: Extrair valores de tensão e corrente da mensagem
+  const match = rawData.match(/T(\d+\.\d+)C(\d+\.\d+)/);
 
-  if (prefix === 'T') {
-    // Dados de tensão recebidos
-    tensaoAnterior = numericValue;
-  } else if (prefix === 'C') {
-    // Dados de corrente recebidos
-    correnteAnterior = numericValue;
+  if (match) {
+    const tensao = parseFloat(match[1]);
+    const corrente = parseFloat(match[2]);
+
+    console.log('Tensão:', tensao, 'Corrente:', corrente);
+
+    // Enviar os dados para o servidor AMQP
+    const timestamp = Date.now();
+    sendToAMQP(ID_TENSAO, tensao, timestamp);
+    sendToAMQP(ID_CORRENTE, corrente, timestamp);
   } else {
-    // Ignorar dados desconhecidos
-    console.warn('Dados desconhecidos recebidos:', rawData);
+    // Ignorar mensagens desconhecidas
+    console.warn('Mensagem desconhecida recebida:', rawData);
   }
 
-  // Continuar com o restante do código (envio para AMQP, etc.)
+  // Continuar com o restante do código se necessário
 });
 
 // Restante do código permanece inalterado
