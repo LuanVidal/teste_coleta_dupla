@@ -1,5 +1,4 @@
 const SerialPort = require('serialport');
-const Readline = require('@serialport/parser-readline');
 const amqp = require('amqplib');
 const ping = require('ping');
 
@@ -21,15 +20,32 @@ let amqpChannelInfo = null;
 
 const buffer = [];
 
-const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600 }, (err) => {
-  if (err) {
-    console.error('Erro ao abrir a porta serial:', err.message);
+const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600 });
+
+port.on('data', (data) => {
+  // Processar os dados recebidos da porta serial
+  const rawData = data.toString();
+  console.log('Dados recebidos:', rawData);
+
+  // Exemplo: Analisar rawData e extrair valores de tensão e corrente
+  const [prefix, value] = rawData.split(':');
+  const numericValue = parseFloat(value);
+
+  if (prefix === 'T') {
+    // Dados de tensão recebidos
+    tensaoAnterior = numericValue;
+  } else if (prefix === 'C') {
+    // Dados de corrente recebidos
+    correnteAnterior = numericValue;
   } else {
-    console.log('Porta serial aberta com sucesso.');
+    // Ignorar dados desconhecidos
+    console.warn('Dados desconhecidos recebidos:', rawData);
   }
+
+  // Continuar com o restante do código (envio para AMQP, etc.)
 });
 
-const parser = port.pipe(new Readline({ delimiter: '\n' }));
+// Restante do código permanece inalterado
 
 const setupAMQPConnection = async (serverUrl) => {
   try {
@@ -124,35 +140,10 @@ const processBuffer = async () => {
 
 // Adicione esta lógica na função startSerialPortRead
 const startSerialPortRead = () => {
-  parser.on('data', (data) => {
-    // Processar os dados recebidos da porta serial
-    // Exemplo: console.log('Dados recebidos:', data);
-    
-    // Divida os dados recebidos em variáveis de tensão e corrente
-    const [prefix, value] = data.split(':');
-    const numericValue = parseFloat(value);
-
-    if (prefix === 'T') {
-      // Dados de tensão recebidos
-      tensaoAnterior = numericValue;
-    } else if (prefix === 'C') {
-      // Dados de corrente recebidos
-      correnteAnterior = numericValue;
-    } else {
-      // Ignorar dados desconhecidos
-      console.warn('Dados desconhecidos recebidos:', data);
-    }
-  });
-};
-
-const startMeasurementLoop = async () => {
-  // Remova as partes relacionadas ao I2C
-
-  // Inicie a leitura da porta serial
-  startSerialPortRead();
+  // Código da leitura serial já foi incorporado acima
 };
 
 // Função para criar um atraso
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-module.exports = { startMeasurementLoop, data };
+module.exports = { startSerialPortRead, data };
