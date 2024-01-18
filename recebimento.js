@@ -136,4 +136,23 @@ const startSerialPortRead = () => {
       // Dados de tensão recebidos
       tensaoAnterior = numericValue;
     } else if (prefix === 'C') {
-      // Dados de c
+      // Dados de corrente recebidos
+      correnteAnterior = numericValue;
+    } else {
+      // Ignorar dados desconhecidos
+      console.warn('Dados desconhecidos recebidos:', data);
+    }
+  });
+};
+
+const startMeasurementLoop = async () => {
+  // Remova as partes relacionadas ao I2C
+
+  // Inicie a leitura da porta serial
+  startSerialPortRead();
+};
+
+// Função para criar um atraso
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+module.exports = { startMeasurementLoop, data };
