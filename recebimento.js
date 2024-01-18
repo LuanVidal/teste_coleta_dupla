@@ -20,34 +20,45 @@ let amqpChannelInfo = null;
 
 const buffer = [];
 
-const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600 });
+const port = new SerialPort('/dev/ttyACM0', { baudRate: 9600 });
+
+let partialData = '';
 
 port.on('data', (data) => {
-  // Processar os dados recebidos da porta serial
-  const rawData = data.toString();
-  console.log('Dados recebidos:', rawData);
+  // Acumular dados até formar uma mensagem completa
+  partialData += data.toString();
 
-  // Exemplo: Extrair valores de tensão e corrente da mensagem
-  const match = rawData.match(/T(\d+\.\d+)C(\d+\.\d+)/);
+  // Verificar se temos uma mensagem completa
+  const messages = partialData.split('T');
 
-  if (match) {
-    const tensao = parseFloat(match[1]);
-    const corrente = parseFloat(match[2]);
+  // Processar cada mensagem completa
+  messages.forEach((msg) => {
+    if (msg.length >= 8) {
+      // Extrair valores de tensão e corrente da mensagem
+      const match = msg.match(/(\d+\.\d+)C(\d+\.\d+)/);
 
-    console.log('Tensão:', tensao, 'Corrente:', corrente);
+      if (match) {
+        const tensao = parseFloat(match[1]);
+        const corrente = parseFloat(match[2]);
 
-    // Enviar os dados para o servidor AMQP
-    const timestamp = Date.now();
-    sendToAMQP(ID_TENSAO, tensao, timestamp);
-    sendToAMQP(ID_CORRENTE, corrente, timestamp);
-  } else {
-    // Ignorar mensagens desconhecidas
-    console.warn('Mensagem desconhecida recebida:', rawData);
-  }
+        console.log('Tensão:', tensao, 'Corrente:', corrente);
+
+        // Enviar os dados para o servidor AMQP
+        const timestamp = Date.now();
+        sendToAMQP(ID_TENSAO, tensao, timestamp);
+        sendToAMQP(ID_CORRENTE, corrente, timestamp);
+      } else {
+        // Ignorar mensagens desconhecidas
+        console.warn('Mensagem desconhecida recebida:', msg);
+      }
+    }
+  });
+
+  // Manter qualquer dado não processado para o próximo evento 'data'
+  partialData = messages[messages.length - 1];
 
   // Continuar com o restante do código se necessário
 });
-
 // Restante do código permanece inalterado
 
 const setupAMQPConnection = async (serverUrl) => {
