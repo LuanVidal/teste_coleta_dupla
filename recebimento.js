@@ -5,8 +5,6 @@ const ping = require('ping');
 
 const amqpServerUrl = 'amqp://W4nuCL2HK09PrG8H:7NXYX2gGYHGxCIBKoN3UtsLfRh@trends.injetoras.tcsapp.com.br:5672';
 const amqpQueue = 'measurements';
-const nomeUsuario = 'W4nuCL2HK09PrG8H';
-const senha = '7NXYX2gGYHGxCIBKoN3UtsLfRh';
 
 const FILTRO = 0.03;
 const LIMIAR_TENSAO = 28000;
@@ -23,7 +21,14 @@ let amqpChannelInfo = null;
 
 const buffer = [];
 
-const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600 }); // Ajuste para a porta serial correta
+const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600 }, (err) => {
+  if (err) {
+    console.error('Erro ao abrir a porta serial:', err.message);
+  } else {
+    console.log('Porta serial aberta com sucesso.');
+  }
+});
+
 const parser = port.pipe(new Readline({ delimiter: '\n' }));
 
 const setupAMQPConnection = async (serverUrl) => {
@@ -131,22 +136,4 @@ const startSerialPortRead = () => {
       // Dados de tensão recebidos
       tensaoAnterior = numericValue;
     } else if (prefix === 'C') {
-      // Dados de corrente recebidos
-      correnteAnterior = numericValue;
-    } else {
-      // Ignorar dados desconhecidos
-      console.warn('Dados desconhecidos recebidos:', data);
-    }
-  });
-};
-
-const startMeasurementLoop = async () => {
-  // Remova as partes relacionadas ao I2C
-
-  // Inicie a leitura da porta serial
-  startSerialPortRead();
-};
-
-// Função para criar um atraso
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-module.exports = { startMeasurementLoop, data };
+      // Dados de c
