@@ -1,4 +1,12 @@
-float tensao = analogRead(A0);
+  #define FILTRO 0.03 // TAXA DE VARIAÇÃO
+  float tensaoAnterior = 0.0;
+  float correnteAnterior = 0.0;
+
+  String mensagemDeErroRecebida = "";
+  float correnteMapeada = 0.0;
+  float tensaoMapeada = 0.0;
+
+  float tensao = analogRead(A0);
   float corrente = analogRead(A1);
 
   tensaoMapeada =  tensao * 0.0977517106549365; // 0 a 100 - 0.0488758553274682
