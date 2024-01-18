@@ -20,8 +20,7 @@ let amqpChannelInfo = null;
 
 const buffer = [];
 
-const port = new SerialPort('/dev/ttyACM0', { baudRate: 9600 });
-
+const port = new SerialPort('/dev/ttyUSB0', { baudRate: 9600 });
 let partialData = '';
 
 port.on('data', (data) => {
@@ -56,10 +55,7 @@ port.on('data', (data) => {
 
   // Manter qualquer dado não processado para o próximo evento 'data'
   partialData = messages[messages.length - 1];
-
-  // Continuar com o restante do código se necessário
 });
-// Restante do código permanece inalterado
 
 const setupAMQPConnection = async (serverUrl) => {
   try {
@@ -94,8 +90,6 @@ const initAMQPConnection = async () => {
 
   isAMQPConnected = true; // Defina como verdadeiro após a conexão inicial
 };
-
-initAMQPConnection();
 
 const checkInternet = () => {
   return new Promise((resolve) => {
@@ -139,9 +133,9 @@ const sendToAMQP = async (idVariavel, valor, dataHora) => {
     };
 
     channel.sendToQueue(amqpQueue, Buffer.from(JSON.stringify(mensagem)));
-    //console.log('Mensagem enviada para a fila AMQP:', mensagem);
+    console.log('Mensagem enviada para a fila AMQP:', mensagem);
   } catch (error) {
-    //console.error('Erro ao enviar mensagem para a fila AMQP:', error);
+    console.error('Erro ao enviar mensagem para a fila AMQP:', error);
   }
 };
 
@@ -152,12 +146,29 @@ const processBuffer = async () => {
   }
 };
 
-// Adicione esta lógica na função startSerialPortRead
-const startSerialPortRead = () => {
-  // Código da leitura serial já foi incorporado acima
+const startMeasurementLoop = async () => {
+  await initAMQPConnection();
+
+  while (true) {
+    try {
+      // Restante do código permanece inalterado
+      // Substitua pelo seu código de medição com ads1115
+      // ...
+
+      await sleep(25); // Atraso de 25 milissegundos
+    } catch (error) {
+      console.error('Erro ao realizar medição:', error);
+      // Se ocorrer um erro, coloque a mensagem no buffer
+      buffer.push({ idVariavel: ID_TENSAO, valor: parseFloat(tensaoAnterior.toFixed(2)), dataHora: Date.now() });
+      buffer.push({ idVariavel: ID_CORRENTE, valor: parseFloat(correnteAnterior.toFixed(2)), dataHora: Date.now() });
+    }
+  }
 };
 
 // Função para criar um atraso
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-module.exports = { startSerialPortRead, data };
+// Iniciar o loop de medição e envio para o servidor AMQP
+startMeasurementLoop();
+
+module.exports = { data };
