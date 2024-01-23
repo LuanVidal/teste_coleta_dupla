@@ -1,23 +1,38 @@
+const i2c = require('i2c-bus');
+const amqp = require('amqplib');
+const ping = require('ping');
+
+const amqpServerUrl = 'amqp://W4nuCL2HK09PrG8H:7NXYX2gGYHGxCIBKoN3UtsLfRh@trends.injetoras.tcsapp.com.br:5672';
+const amqpQueue = 'measurements';
+
+const FILTRO = 0.03;
+const LIMIAR_TENSAO = 28000;
+const LIMIAR_CORRENTE = 28000;
+
+const ID_TENSAO = 33;
+const ID_CORRENTE = 32;
+
+let isAMQPConnected = false;
+let amqpChannelInfo = null;
+
+const buffer = [];
+
 const i2cBus = i2c.openSync(1); // Abre o barramento I2C (pode ser 1 ou 0 dependendo do Raspberry Pi)
 
-i2cBus.readI2cBlock(8, 3, 3, Buffer.alloc(3), (err, bytesRead, buffer) => {
+i2cBus.readI2cBlock(8, 9, 9, Buffer.alloc(9), (err, bytesRead, buffer) => {
   if (err) {
     console.error('Erro na leitura I2C:', err);
     return;
   }
 
   const tipo = String.fromCharCode(buffer[0]);
-  const valor = buffer.readFloatLE(1);
+  const tensao = buffer.readFloatLE(1);
+  const corrente = buffer.readFloatLE(5);
 
-  if (tipo === 'T') {
-    measurementData.tensaoAnterior = valor;
-  } else if (tipo === 'C') {
-    measurementData.correnteAnterior = valor;
-  }
+  console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
 
-  console.log('Tensão:', measurementData.tensaoAnterior, 'Corrente:', measurementData.correnteAnterior);
-
+  // Enviar os dados para o servidor AMQP
   const timestamp = Date.now();
-  sendToAMQP(ID_TENSAO, measurementData.tensaoAnterior, timestamp);
-  sendToAMQP(ID_CORRENTE, measurementData.correnteAnterior, timestamp);
+  sendToAMQP(ID_TENSAO, tensao, timestamp);
+  sendToAMQP(ID_CORRENTE, corrente, timestamp);
 });
