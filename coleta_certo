@@ -1,74 +1,23 @@
-  #define FILTRO 0.03 // TAXA DE VARIAÇÃO
-  float tensaoAnterior = 0.0;
-  float correnteAnterior = 0.0;
+const i2cBus = i2c.openSync(1); // Abre o barramento I2C (pode ser 1 ou 0 dependendo do Raspberry Pi)
 
-  String mensagemDeErroRecebida = "";
-  float correnteMapeada = 0.0;
-  float tensaoMapeada = 0.0;
-
-  float tensao = analogRead(A0);
-  float corrente = analogRead(A1);
-
-  tensaoMapeada =  tensao * 0.0977517106549365; // 0 a 100 - 0.0488758553274682
-  correnteMapeada = corrente * 0.5865102639296188; // 0 a 600 - 0.2932551319648094
-  
-  if (tensaoMapeada <= 100) {
-    // Aplicar o filtro com margem de 3%
-    if (tensaoAnterior + (100 * FILTRO) < tensaoMapeada || tensaoAnterior - (100 * FILTRO) > tensaoMapeada ) {
-      tensaoAnterior = tensaoMapeada;
-    }
-
-  } else {
-    tensaoAnterior = 100;
+i2cBus.readI2cBlock(8, 3, 3, Buffer.alloc(3), (err, bytesRead, buffer) => {
+  if (err) {
+    console.error('Erro na leitura I2C:', err);
+    return;
   }
 
-  if (tensaoMapeada <= 0) {
-    tensaoAnterior = 0;
+  const tipo = String.fromCharCode(buffer[0]);
+  const valor = buffer.readFloatLE(1);
+
+  if (tipo === 'T') {
+    measurementData.tensaoAnterior = valor;
+  } else if (tipo === 'C') {
+    measurementData.correnteAnterior = valor;
   }
 
-  if (correnteMapeada <= 600) {
-    // Aplicar o filtro com margem de 3%
-    if (correnteAnterior + (600 * FILTRO) < correnteMapeada || correnteAnterior - (600 * FILTRO) > correnteMapeada ) {
-      correnteAnterior = correnteMapeada;
-    } 
-  } else {
-    correnteAnterior = 600;
-  }
+  console.log('Tensão:', measurementData.tensaoAnterior, 'Corrente:', measurementData.correnteAnterior);
 
-  if (correnteMapeada <= 0) {
-    correnteAnterior = 0;
-  }
-  /*
-  Serial.print("TENSAO: (");
-  Serial.print(tensao);
-  Serial.print(") Mapeado (");
-  Serial.print(tensaoMapeada);
-  Serial.print(") Enviado (");
-  Serial.print(tensaoAnterior);
-  Serial.print(") | Corrente (");
-  Serial.print(corrente);
-  Serial.print(") Mapeado (");
-  Serial.print(correnteMapeada);
-  Serial.print(") Enviado (");
-  Serial.print(correnteAnterior);
-  Serial.println(")"); 
-  */
-  
-
-  Serial3.print("Tensao:");
-  Serial3.print(tensaoAnterior, 2);
-  Serial3.print("V |");
-  Serial3.print("Corrente:");
-  Serial3.print(correnteAnterior, 2);
-  Serial3.println("A");
-
-  /*Serial.print("Tensao:");
-  Serial.print(tensaoAnterior);
-  Serial.print(" V |");
-  Serial.print("Corrente:");
-  Serial.print(correnteAnterior);
-  Serial.println("A");*/
-
-  delay(200);
-  // Envia os dados para o ESP8266 via comunicação serial
-}
+  const timestamp = Date.now();
+  sendToAMQP(ID_TENSAO, measurementData.tensaoAnterior, timestamp);
+  sendToAMQP(ID_CORRENTE, measurementData.correnteAnterior, timestamp);
+});
