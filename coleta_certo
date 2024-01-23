@@ -34,13 +34,17 @@ i2cBus.readI2cBlock(8, 9, 9, Buffer.alloc(9), (err, bytesRead, buffer) => {
   const tensao = buffer.readFloatLE(1);
   const corrente = buffer.readFloatLE(5);
 
-  measurementData.tensaoAnterior = tensao;
-  measurementData.correnteAnterior = corrente;
+  if (!isNaN(tensao) && !isNaN(corrente)) {
+    measurementData.tensaoAnterior = tensao;
+    measurementData.correnteAnterior = corrente;
 
-  console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
+    console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
 
-  // Enviar os dados para o servidor AMQP
-  const timestamp = Date.now();
-  sendToAMQP(ID_TENSAO, tensao, timestamp);
-  sendToAMQP(ID_CORRENTE, corrente, timestamp);
+    // Enviar os dados para o servidor AMQP
+    const timestamp = Date.now();
+    sendToAMQP(ID_TENSAO, tensao, timestamp);
+    sendToAMQP(ID_CORRENTE, corrente, timestamp);
+  } else {
+    console.error('Valores lidos do I2C são inválidos.');
+  }
 });
