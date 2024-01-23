@@ -52,18 +52,18 @@ void loop() {
   byte *correnteBytes = (byte *)&correnteAnterior;
 
   // Envia os bytes
+  Serial.println("Enviando dados via I2C...");
+  Serial.print("T");
+  Serial.print(tensaoAnterior, 2);
+  Serial.print("C");
+  Serial.println(correnteAnterior, 2);
+
   Wire.write('T');
   Wire.write(tensaoBytes, sizeof(float));
   Wire.write('C');
   Wire.write(correnteBytes, sizeof(float));
 
   Wire.endTransmission();
-
-  // Log dos dados
-  Serial.print("Sent data: T");
-  Serial.print(tensaoAnterior, 2);
-  Serial.print(" C");
-  Serial.println(correnteAnterior, 2);
 
   delay(200);
 }
