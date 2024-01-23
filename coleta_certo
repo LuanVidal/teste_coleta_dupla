@@ -15,7 +15,7 @@ const ID_CORRENTE = 32;
 let isAMQPConnected = false;
 let amqpChannelInfo = null;
 
-const buffer = [];
+const buffer = Buffer.alloc(9); // Buffer para armazenar os dados recebidos
 
 const i2cBus = i2c.openSync(1); // Abre o barramento I2C (pode ser 1 ou 0 dependendo do Raspberry Pi)
 
@@ -24,31 +24,34 @@ const measurementData = {
   correnteAnterior: 0,
 };
 
-function readI2CData() {
-  i2cBus.readI2cBlock(8, 9, 9, Buffer.alloc(9), (err, bytesRead, buffer) => {
-    if (err) {
-      console.error('Erro na leitura I2C:', err);
-      return;
-    }
+i2cBus.readI2cBlock(8, buffer.length, buffer, (err, bytesRead, buffer) => {
+  if (err) {
+    console.error('Erro na leitura I2C:', err);
+    return;
+  }
 
-    const tipo = String.fromCharCode(buffer[0]);
-    const tensao = buffer.readFloatLE(1);
-    const corrente = buffer.readFloatLE(5);
+  const tipo = String.fromCharCode(buffer[0]);
 
-    if (!isNaN(tensao) && !isNaN(corrente)) {
-      measurementData.tensaoAnterior = tensao;
-      measurementData.correnteAnterior = corrente;
+  // Verifica o tipo e faz a leitura adequada
+  if (tipo === 'T' || tipo === 'C') {
+    const valor = buffer.readFloatLE(1);
 
-      console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
+    if (!isNaN(valor)) {
+      if (tipo === 'T') {
+        measurementData.tensaoAnterior = valor;
+      } else {
+        measurementData.correnteAnterior = valor;
+      }
+
+      console.log('Tipo:', tipo, 'Valor:', valor);
 
       // Enviar os dados para o servidor AMQP
       const timestamp = Date.now();
-      sendToAMQP(ID_TENSAO, tensao, timestamp);
-      sendToAMQP(ID_CORRENTE, corrente, timestamp);
+      sendToAMQP(tipo === 'T' ? ID_TENSAO : ID_CORRENTE, valor, timestamp);
     } else {
-      console.error('Valores lidos do I2C são inválidos.');
+      console.error('Valor lido do I2C é inválido.');
     }
-  });
-}
-
-setInterval(readI2CData, 200);
+  } else {
+    console.error('Tipo desconhecido recebido:', tipo);
+  }
+});
