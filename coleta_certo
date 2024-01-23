@@ -32,6 +32,8 @@ function readI2CData() {
         return;
       }
 
+      console.log('Buffer:', buffer);
+
       const tipo = String.fromCharCode(buffer[0]);
       const tensao = buffer.readFloatLE(1);
       const corrente = buffer.readFloatLE(5);
