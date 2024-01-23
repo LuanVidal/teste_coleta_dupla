@@ -59,9 +59,9 @@ void loop() {
   Serial.println(correnteAnterior, 2);
 
   Wire.write('T');
-  Wire.write(tensaoBytes, sizeof(float));
+  Wire.write(reinterpret_cast<byte*>(&tensaoAnterior), sizeof(float));
   Wire.write('C');
-  Wire.write(correnteBytes, sizeof(float));
+  Wire.write(reinterpret_cast<byte*>(&correnteAnterior), sizeof(float));
 
   Wire.endTransmission();
 
