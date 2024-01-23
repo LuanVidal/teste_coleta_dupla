@@ -15,9 +15,9 @@ const ID_CORRENTE = 32;
 let isAMQPConnected = false;
 let amqpChannelInfo = null;
 
-const buffer = Buffer.alloc(9);
+const buffer = [];
 
-const i2cBus = i2c.openSync(1);
+const i2cBus = i2c.openSync(1); // Abre o barramento I2C (pode ser 1 ou 0 dependendo do Raspberry Pi)
 
 const measurementData = {
   tensaoAnterior: 0,
@@ -25,14 +25,13 @@ const measurementData = {
 };
 
 function readI2CData() {
-  i2cBus.readI2cBlock(8, 9, 9, buffer, (err, bytesRead, buffer) => {
+  i2cBus.readI2cBlock(8, 0, 9, Buffer.alloc(9), (err, bytesRead, buffer) => {
     if (err) {
       console.error('Erro na leitura I2C:', err);
       return;
     }
 
-    const message = buffer.toString('ascii');
-    console.log('Mensagem I2C Recebida:', message);
+    console.log('Dados lidos via I2C:', buffer.toString('hex'));
 
     const tipo = String.fromCharCode(buffer[0]);
     const tensao = buffer.readFloatLE(1);
