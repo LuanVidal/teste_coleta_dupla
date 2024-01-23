@@ -8,6 +8,7 @@ float correnteMapeada = 0.0;
 float tensaoMapeada = 0.0;
 
 void setup() {
+  Serial.begin(9600);
   Wire.begin();
   delay(1000); // Aguarde a inicialização do I2C
 }
@@ -45,11 +46,24 @@ void loop() {
 
   // Envia os dados via I2C
   Wire.beginTransmission(8); // Endereço do dispositivo I2C
+
+  // Converte float para bytes
+  byte *tensaoBytes = (byte *)&tensaoAnterior;
+  byte *correnteBytes = (byte *)&correnteAnterior;
+
+  // Envia os bytes
   Wire.write('T');
-  Wire.write(tensaoAnterior);
+  Wire.write(tensaoBytes, sizeof(float));
   Wire.write('C');
-  Wire.write(correnteAnterior);
+  Wire.write(correnteBytes, sizeof(float));
+
   Wire.endTransmission();
+
+  // Log dos dados
+  Serial.print("Sent data: T");
+  Serial.print(tensaoAnterior, 2);
+  Serial.print(" C");
+  Serial.println(correnteAnterior, 2);
 
   delay(200);
 }
