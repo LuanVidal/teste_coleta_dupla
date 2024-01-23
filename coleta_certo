@@ -23,15 +23,14 @@ const measurementData = {
 };
 
 function readI2CData() {
-  // Ler os dados I2C um byte por vez
-  const tipo = String.fromCharCode(i2cBus.readByteSync(8));
-  const tensaoBuffer = Buffer.alloc(4);
-  i2cBus.readI2cBlockSync(8, 1, 4, tensaoBuffer);
-  const tensao = tensaoBuffer.readFloatLE(0);
+  // Ler os dados I2C diretamente
+  const buffer = Buffer.alloc(9); // Tamanho total da mensagem
 
-  const correnteBuffer = Buffer.alloc(4);
-  i2cBus.readI2cBlockSync(8, 5, 4, correnteBuffer);
-  const corrente = correnteBuffer.readFloatLE(0);
+  i2cBus.readI2cBlockSync(8, buffer.length, buffer.length, buffer);
+
+  const tipo = String.fromCharCode(buffer[0]);
+  const tensao = buffer.readFloatLE(1);
+  const corrente = buffer.readFloatLE(5);
 
   if (!isNaN(tensao) && !isNaN(corrente)) {
     measurementData.tensaoAnterior = tensao;
