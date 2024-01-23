@@ -15,7 +15,7 @@ const ID_CORRENTE = 32;
 let isAMQPConnected = false;
 let amqpChannelInfo = null;
 
-const buffer = [];
+const buffer = Buffer.alloc(12); // Ajuste o tamanho conforme necessário
 
 const i2cBus = i2c.openSync(1); // Abre o barramento I2C (pode ser 1 ou 0 dependendo do Raspberry Pi)
 
@@ -26,16 +26,15 @@ const measurementData = {
 
 function readI2CData() {
   try {
-    const dataBuffer = Buffer.alloc(8); // tamanho deve ser igual ao número de bytes enviados pelo Arduino
-    i2cBus.readI2cBlock(8, 0, dataBuffer.length, dataBuffer, (err) => {
+    i2cBus.readI2cBlock(8, 0, buffer.length, buffer, (err) => {
       if (err) {
         console.error('Erro na leitura I2C:', err);
         return;
       }
 
-      const tipo = String.fromCharCode(dataBuffer[0]);
-      const tensao = dataBuffer.readFloatLE(1);
-      const corrente = dataBuffer.readFloatLE(5);
+      const tipo = String.fromCharCode(buffer[0]);
+      const tensao = buffer.readFloatLE(1);
+      const corrente = buffer.readFloatLE(5);
 
       if (!isNaN(tensao) && !isNaN(corrente)) {
         measurementData.tensaoAnterior = tensao;
