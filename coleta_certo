@@ -1,6 +1,5 @@
 const i2c = require('i2c-bus');
 const amqp = require('amqplib');
-const ping = require('ping');
 
 const amqpServerUrl = 'amqp://W4nuCL2HK09PrG8H:7NXYX2gGYHGxCIBKoN3UtsLfRh@trends.injetoras.tcsapp.com.br:5672';
 const amqpQueue = 'measurements';
@@ -35,15 +34,15 @@ i2cBus.readI2cBlock(8, 9, 9, Buffer.alloc(9), (err, bytesRead, buffer) => {
   const corrente = buffer.readFloatLE(5);
 
   if (!isNaN(tensao) && !isNaN(corrente)) {
-    measurementData.tensaoAnterior = tensao;
-    measurementData.correnteAnterior = corrente;
+    measurementData.tensaoAnterior = parseFloat(tensao.toFixed(2));
+    measurementData.correnteAnterior = parseFloat(corrente.toFixed(2));
 
     console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
 
     // Enviar os dados para o servidor AMQP
     const timestamp = Date.now();
-    sendToAMQP(ID_TENSAO, tensao, timestamp);
-    sendToAMQP(ID_CORRENTE, corrente, timestamp);
+    sendToAMQP(ID_TENSAO, measurementData.tensaoAnterior, timestamp);
+    sendToAMQP(ID_CORRENTE, measurementData.correnteAnterior, timestamp);
   } else {
     console.error('Valores lidos do I2C são inválidos.');
   }
