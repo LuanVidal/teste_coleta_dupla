@@ -15,8 +15,6 @@ const ID_CORRENTE = 32;
 let isAMQPConnected = false;
 let amqpChannelInfo = null;
 
-const buffer = Buffer.alloc(12); // Ajuste o tamanho conforme necessário
-
 const i2cBus = i2c.openSync(1); // Abre o barramento I2C (pode ser 1 ou 0 dependendo do Raspberry Pi)
 
 const measurementData = {
@@ -25,35 +23,28 @@ const measurementData = {
 };
 
 function readI2CData() {
-  try {
-    i2cBus.readI2cBlock(8, 0, buffer.length, buffer, (err) => {
-      if (err) {
-        console.error('Erro na leitura I2C:', err);
-        return;
-      }
+  // Ler os dados I2C um byte por vez
+  const tipo = String.fromCharCode(i2cBus.readByteSync(8));
+  const tensaoBuffer = Buffer.alloc(4);
+  i2cBus.readI2cBlockSync(8, 1, 4, tensaoBuffer);
+  const tensao = tensaoBuffer.readFloatLE(0);
 
-      console.log('Buffer:', buffer);
+  const correnteBuffer = Buffer.alloc(4);
+  i2cBus.readI2cBlockSync(8, 5, 4, correnteBuffer);
+  const corrente = correnteBuffer.readFloatLE(0);
 
-      const tipo = String.fromCharCode(buffer[0]);
-      const tensao = buffer.readFloatLE(1);
-      const corrente = buffer.readFloatLE(5);
+  if (!isNaN(tensao) && !isNaN(corrente)) {
+    measurementData.tensaoAnterior = tensao;
+    measurementData.correnteAnterior = corrente;
 
-      if (!isNaN(tensao) && !isNaN(corrente)) {
-        measurementData.tensaoAnterior = tensao;
-        measurementData.correnteAnterior = corrente;
+    console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
 
-        console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
-
-        // Enviar os dados para o servidor AMQP
-        const timestamp = Date.now();
-        sendToAMQP(ID_TENSAO, tensao, timestamp);
-        sendToAMQP(ID_CORRENTE, corrente, timestamp);
-      } else {
-        console.error('Valores lidos do I2C são inválidos.');
-      }
-    });
-  } catch (error) {
-    console.error('Erro na leitura I2C:', error);
+    // Enviar os dados para o servidor AMQP
+    const timestamp = Date.now();
+    sendToAMQP(ID_TENSAO, tensao, timestamp);
+    sendToAMQP(ID_CORRENTE, corrente, timestamp);
+  } else {
+    console.error('Valores lidos do I2C são inválidos.');
   }
 }
 
