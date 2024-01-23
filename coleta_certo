@@ -25,32 +25,35 @@ const measurementData = {
 };
 
 function readI2CData() {
-  i2cBus.readI2cBlock(8, 0, 9, Buffer.alloc(9), (err, bytesRead, buffer) => {
-    if (err) {
-      console.error('Erro na leitura I2C:', err);
-      return;
-    }
+  try {
+    const dataBuffer = Buffer.alloc(8); // tamanho deve ser igual ao número de bytes enviados pelo Arduino
+    i2cBus.readI2cBlock(8, 0, dataBuffer.length, dataBuffer, (err) => {
+      if (err) {
+        console.error('Erro na leitura I2C:', err);
+        return;
+      }
 
-    console.log('Dados lidos via I2C:', buffer.toString('hex'));
+      const tipo = String.fromCharCode(dataBuffer[0]);
+      const tensao = dataBuffer.readFloatLE(1);
+      const corrente = dataBuffer.readFloatLE(5);
 
-    const tipo = String.fromCharCode(buffer[0]);
-    const tensao = buffer.readFloatLE(1);
-    const corrente = buffer.readFloatLE(5);
+      if (!isNaN(tensao) && !isNaN(corrente)) {
+        measurementData.tensaoAnterior = tensao;
+        measurementData.correnteAnterior = corrente;
 
-    if (!isNaN(tensao) && !isNaN(corrente)) {
-      measurementData.tensaoAnterior = tensao;
-      measurementData.correnteAnterior = corrente;
+        console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
 
-      console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
-
-      // Enviar os dados para o servidor AMQP
-      const timestamp = Date.now();
-      sendToAMQP(ID_TENSAO, tensao, timestamp);
-      sendToAMQP(ID_CORRENTE, corrente, timestamp);
-    } else {
-      console.error('Valores lidos do I2C são inválidos.');
-    }
-  });
+        // Enviar os dados para o servidor AMQP
+        const timestamp = Date.now();
+        sendToAMQP(ID_TENSAO, tensao, timestamp);
+        sendToAMQP(ID_CORRENTE, corrente, timestamp);
+      } else {
+        console.error('Valores lidos do I2C são inválidos.');
+      }
+    });
+  } catch (error) {
+    console.error('Erro na leitura I2C:', error);
+  }
 }
 
 setInterval(readI2CData, 200);
