@@ -1,17 +1,55 @@
+#include <Wire.h>
+
+#define FILTRO 0.03 // TAXA DE VARIAÇÃO
+float tensaoAnterior = 0.0;
+float correnteAnterior = 0.0;
+
+float correnteMapeada = 0.0;
+float tensaoMapeada = 0.0;
+
 void setup() {
-  Serial.begin(9600); // Ajuste a taxa de baud para corresponder à configuração da porta serial no Raspberry Pi
+  Wire.begin();
+  delay(1000); // Aguarde a inicialização do I2C
 }
 
 void loop() {
-  // Leia seus dados analógicos aqui
-  int tensao = analogRead(A0);
-  int corrente = analogRead(A1);
+  float tensao = analogRead(A1);
+  float corrente = analogRead(A0);
 
-  // Envie os dados pela porta serial
-  Serial.print("T");
-  Serial.println(tensao);
-  Serial.print("C");
-  Serial.println(corrente);
+  tensaoMapeada = tensao * 0.0977517106549365;
+  correnteMapeada = corrente * 0.5865102639296188;
 
-  delay(1000); // Ajuste o intervalo conforme necessário
+  if (tensaoMapeada <= 100) {
+    if (tensaoAnterior + (100 * FILTRO) < tensaoMapeada || tensaoAnterior - (100 * FILTRO) > tensaoMapeada) {
+      tensaoAnterior = tensaoMapeada;
+    }
+  } else {
+    tensaoAnterior = 100;
+  }
+
+  if (tensaoMapeada <= 0) {
+    tensaoAnterior = 0;
+  }
+
+  if (correnteMapeada <= 600) {
+    if (correnteAnterior + (600 * FILTRO) < correnteMapeada || correnteAnterior - (600 * FILTRO) > correnteMapeada) {
+      correnteAnterior = correnteMapeada;
+    }
+  } else {
+    correnteAnterior = 600;
+  }
+
+  if (correnteMapeada <= 0) {
+    correnteAnterior = 0;
+  }
+
+  // Envia os dados via I2C
+  Wire.beginTransmission(8); // Endereço do dispositivo I2C
+  Wire.write('T');
+  Wire.write(tensaoAnterior);
+  Wire.write('C');
+  Wire.write(correnteAnterior);
+  Wire.endTransmission();
+
+  delay(200);
 }
