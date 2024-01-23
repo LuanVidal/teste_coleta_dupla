@@ -15,43 +15,43 @@ const ID_CORRENTE = 32;
 let isAMQPConnected = false;
 let amqpChannelInfo = null;
 
-const buffer = Buffer.alloc(9); // Buffer para armazenar os dados recebidos
+const buffer = Buffer.alloc(9);
 
-const i2cBus = i2c.openSync(1); // Abre o barramento I2C (pode ser 1 ou 0 dependendo do Raspberry Pi)
+const i2cBus = i2c.openSync(1);
 
 const measurementData = {
   tensaoAnterior: 0,
   correnteAnterior: 0,
 };
 
-i2cBus.readI2cBlock(8, buffer.length, buffer, (err, bytesRead, buffer) => {
-  if (err) {
-    console.error('Erro na leitura I2C:', err);
-    return;
-  }
+function readI2CData() {
+  i2cBus.readI2cBlock(8, 9, 9, buffer, (err, bytesRead, buffer) => {
+    if (err) {
+      console.error('Erro na leitura I2C:', err);
+      return;
+    }
 
-  const tipo = String.fromCharCode(buffer[0]);
+    const message = buffer.toString('ascii');
+    console.log('Mensagem I2C Recebida:', message);
 
-  // Verifica o tipo e faz a leitura adequada
-  if (tipo === 'T' || tipo === 'C') {
-    const valor = buffer.readFloatLE(1);
+    const tipo = String.fromCharCode(buffer[0]);
+    const tensao = buffer.readFloatLE(1);
+    const corrente = buffer.readFloatLE(5);
 
-    if (!isNaN(valor)) {
-      if (tipo === 'T') {
-        measurementData.tensaoAnterior = valor;
-      } else {
-        measurementData.correnteAnterior = valor;
-      }
+    if (!isNaN(tensao) && !isNaN(corrente)) {
+      measurementData.tensaoAnterior = tensao;
+      measurementData.correnteAnterior = corrente;
 
-      console.log('Tipo:', tipo, 'Valor:', valor);
+      console.log('Tipo:', tipo, 'Tensão:', tensao, 'Corrente:', corrente);
 
       // Enviar os dados para o servidor AMQP
       const timestamp = Date.now();
-      sendToAMQP(tipo === 'T' ? ID_TENSAO : ID_CORRENTE, valor, timestamp);
+      sendToAMQP(ID_TENSAO, tensao, timestamp);
+      sendToAMQP(ID_CORRENTE, corrente, timestamp);
     } else {
-      console.error('Valor lido do I2C é inválido.');
+      console.error('Valores lidos do I2C são inválidos.');
     }
-  } else {
-    console.error('Tipo desconhecido recebido:', tipo);
-  }
-});
+  });
+}
+
+setInterval(readI2CData, 200);
